@@ -22,7 +22,6 @@ const getUserWithEmail = function(email) {
   WHERE email = $1`
   , [`${email}`])
     .then((res) => {
-      //console.log(res.rows)
       return res.rows[0];
     })
     .catch(err => error);
@@ -76,7 +75,7 @@ const getAllReservations = function(guest_id, limit = 10) { //query taken from 5
   ORDER BY start_date
   LIMIT $2
   `, [`${guest_id}`, `${limit}`])
-    .then(res => res.rows); //not rows[0] like the others because you want all the entries.
+    .then(res => res.rows);
 };
 exports.getAllReservations = getAllReservations;
 
@@ -89,10 +88,8 @@ exports.getAllReservations = getAllReservations;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function(options, limit = 10) {
-  //1 holds options
   const queryParams = [];
 
-  //2 start of sql query
   let queryString = `
   SELECT properties.*, avg(property_reviews.rating) as average_rating
   FROM properties
@@ -102,52 +99,47 @@ const getAllProperties = function(options, limit = 10) {
 
   if (options.owner_id) {
     queryParams.push(`${options.owner_id}`);
-    queryString += `AND owner_id = $${queryParams.length} `
+    queryString += `AND owner_id = $${queryParams.length} `;
   }
 
-  //3.1 city search option in sql query extra statement to combine search params
+  //3.1 city search option
   if (options.city) {
-      queryParams.push(`%${options.city}%`);
-      queryString += `AND city LIKE $${queryParams.length} `;
+    queryParams.push(`%${options.city}%`);
+    queryString += `AND city LIKE $${queryParams.length} `;
   }
 
   //3.3 min cost per night
   if (options.minimum_price_per_night) {
-      queryParams.push(Number(options.minimum_price_per_night) * 100); //because if there is ALREADY a length, then this means the next addition is the right $number
-      queryString += `AND cost_per_night >= $${queryParams.length} `;
+    queryParams.push(Number(options.minimum_price_per_night) * 100);
+    queryString += `AND cost_per_night >= $${queryParams.length} `;
   }
 
   //3.4 max cost per night
   if (options.maximum_price_per_night) {
-      queryParams.push(Number(options.maximum_price_per_night) * 100);
-      queryString += `AND cost_per_night <= $${queryParams.length} `;
+    queryParams.push(Number(options.maximum_price_per_night) * 100);
+    queryString += `AND cost_per_night <= $${queryParams.length} `;
   }
 
-  //4.1 split to make room for HAVING
   queryString += `
-  GROUP BY properties.id `;//this friggen space ruined it all for 15 minutes
+  GROUP BY properties.id `;
 
-  //3.5 minimum rating moved down because of the neceessity of the HAVING statement. Remember, HAVING for aggregate sorts
+  //3.5 minimum rating
   if (options.minimum_rating) {
     queryParams.push(Number(options.minimum_rating));
     queryString += `HAVING avg(rating) >= $${queryParams.length} `;
   }
 
-  //4.2 adds limit as $2/3/4 whatever since it should be last, along with order by syntax.
   queryParams.push(limit);
   queryString += `
   ORDER BY cost_per_night
   LIMIT $${queryParams.length};
   `;
 
-  //5 checking in console.
-  console.log("qs: \n", queryString, "\n qP: \n", queryParams);
-
-  //6 actual query promise
   return pool.query(queryString, queryParams)
     .then(res => {
-      console.log("RES: \n", res.rows)
-      return res.rows});
+      console.log("RES: \n", res.rows);
+      return res.rows;
+    });
 };
 
 exports.getAllProperties = getAllProperties;
@@ -162,10 +154,10 @@ const addProperty = function(property) {
   return pool.query(`
   INSERT INTO properties (owner_id, title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, street, city, province, post_code, country, parking_spaces, number_of_bathrooms, number_of_bedrooms)
   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
-  RETURNING *;`, 
+  RETURNING *;`,
   [`${property.owner_id}`, `${property.title}`, `${property.description}`, `${property.thumbnail_photo_url}`, `${property.cover_photo_url}`, `${property.cost_per_night}`, `${property.street}`, `${property.city}`, `${property.province}`, `${property.post_code}`, `${property.country}`, `${property.parking_spaces}`, `${property.number_of_bathrooms}`, `${property.number_of_bedrooms}`])
-  .then(res => res.rows[0])
-}
+    .then(res => res.rows[0]);
+};
 
 
 exports.addProperty = addProperty;
